@@ -71,6 +71,8 @@ npm run test:coverage
 - 📖 [Guia Completo de Testes](./TESTING.md)
 - 📋 [Checklist de Validação](./CHECKLIST_VALIDACAO.md)
 - 📝 [Detalhes da Implementação](./IMPLEMENTACAO_TESTES.md)
+- 🧪 [Dados de Teste do Mercado Pago](./DADOS_TESTE_MERCADOPAGO.md)
+- 🛠️ [Guia de Testes Manuais](./GUIA_TESTES_MANUAIS.md)
 
 ### Pre-commit Hook
 
@@ -117,6 +119,29 @@ http://localhost:3000/teste
 ```
 
 📖 [Guia completo da página de testes](./PAGINA_TESTE.md)
+
+## 🧪 Teste do Webhook
+
+Para testar o webhook localmente, você pode usar o script automatizado:
+
+```bash
+# Certifique-se de que o servidor está rodando em outro terminal
+npm run dev
+
+# Execute o script de teste do webhook
+./test-webhook.sh
+```
+
+### Dados de Teste
+
+Utilize os dados fornecidos pelo Mercado Pago para seus testes:
+
+- **Usuário:** Dionatan Brasil (ID: 2973455888)
+- **Cartão Mastercard:** 5031 4332 1540 6351
+- **Cartão Visa:** 4235 6477 2802 5682
+- **CVV:** 123 | **Validade:** 11/30
+
+📖 Consulte [DADOS_TESTE_MERCADOPAGO.md](./DADOS_TESTE_MERCADOPAGO.md) para mais detalhes.
 
 ---
 

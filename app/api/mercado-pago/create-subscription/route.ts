@@ -49,21 +49,30 @@ export async function POST(req: NextRequest) {
     // Para assinaturas anuais, cobramos 12 meses de uma vez
     const isAnnual = planType === "annual";
 
+    // Estrutura correta do plano conforme documentação Mercado Pago
+    const planBody = {
+      reason: plan.title,
+      auto_recurring: {
+        frequency: isAnnual ? 12 : plan.frequency, // 12 meses para anual, 1 para mensal
+        frequency_type: plan.frequency_type,
+        transaction_amount: plan.amount,
+        currency_id: "BRL",
+      },
+      back_url: "https://www.google.com", // URL válida obrigatória para testes
+      payer_email: userEmail,
+      external_reference: userId || `user_${Date.now()}`,
+    };
+
+    console.log("Criando plano com dados:", JSON.stringify(planBody, null, 2));
+
     const createdPlan = await preApprovalPlan.create({
-      body: {
-        reason: plan.title,
-        auto_recurring: {
-          frequency: isAnnual ? 12 : plan.frequency, // 12 meses para anual
-          frequency_type: plan.frequency_type,
-          transaction_amount: plan.amount,
-          currency_id: "BRL",
-        },
-        back_url: `${req.headers.get("origin")}/?subscription=success`,
-      } as any, // Usando 'as any' temporariamente devido a limitações do tipo SDK
+      body: planBody as any,
     });
 
+    console.log("Plano criado:", createdPlan);
+
     if (!createdPlan.id) {
-      throw new Error("Falha ao criar plano de assinatura");
+      throw new Error("Falha ao criar plano de assinatura - ID não retornado");
     }
 
     return NextResponse.json({
@@ -73,10 +82,21 @@ export async function POST(req: NextRequest) {
       amount: plan.amount,
       frequency: isAnnual ? "12 meses" : "mensal",
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Erro ao criar assinatura:", err);
+
+    // Retorna detalhes do erro para facilitar debug
+    const errorMessage = err?.message || "Erro desconhecido";
+    const errorStatus = err?.status || 500;
+    const errorCode = err?.code;
+
     return NextResponse.json(
-      { error: "Erro ao criar assinatura" },
+      {
+        error: "Erro ao criar assinatura",
+        details: errorMessage,
+        code: errorCode,
+        status: errorStatus,
+      },
       { status: 500 }
     );
   }

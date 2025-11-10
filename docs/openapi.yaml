@@ -1,0 +1,794 @@
+openapi: 3.0.3
+info:
+  title: MercadoPago NextJS API
+  description: |
+    API enterprise para integração com MercadoPago NextJS, fornecendo endpoints seguros para pagamentos únicos, assinaturas recorrentes e gestão de transações.
+
+    ## Características
+
+    - ✅ **Autenticação por API Key** - Sistema seguro de chaves de API
+    - 🛡️ **Rate Limiting** - Controle de taxa de requisições
+    - 🔄 **Webhook Integration** - Notificações automáticas de eventos
+    - 📊 **Multi-tenant** - Suporte para múltiplos clientes
+    - 🚀 **Alta Performance** - Otimizado para produção
+
+    ## Autenticação
+
+    Todas as rotas protegidas requerem uma chave de API válida no header `X-API-Key`.
+
+    ## Rate Limiting
+
+    - **Checkout:** 100 req/min por cliente
+    - **Subscription:** 50 req/min por cliente  
+    - **Webhook:** 1000 req/min global
+    - **Transactions:** 200 req/min por cliente
+
+    ## Ambientes
+
+    - **Desenvolvimento:** `http://localhost:3000`
+    - **Produção:** `https://sua-api.com`
+
+  version: 2.0.0
+  contact:
+    name: Andre Dev
+    email: suporte@andredev.com
+    url: https://github.com/andredev/mercadopago-nextjs-by-andredev
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Servidor de desenvolvimento
+  - url: https://api.example.com
+    description: Servidor de produção
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /api/mercado-pago/v2/create-checkout:
+    post:
+      tags:
+        - Pagamentos
+      summary: Criar checkout de pagamento único
+      description: |
+        Cria um checkout para pagamento único no MercadoPago.
+
+        **Rate Limit:** 100 requisições por minuto por cliente
+
+        **Permissões requeridas:** `create_checkout`
+      operationId: createCheckout
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutRequest"
+            examples:
+              produto_digital:
+                summary: Produto Digital
+                value:
+                  produto: "Curso de JavaScript Avançado"
+                  preco: 199.90
+                  email: "cliente@email.com"
+                  order_id: "order-12345"
+              produto_fisico:
+                summary: Produto Físico
+                value:
+                  produto: "Smartphone Premium"
+                  preco: 1299.99
+                  email: "comprador@exemplo.com"
+                  order_id: "order-67890"
+      responses:
+        "200":
+          description: Checkout criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+              examples:
+                success:
+                  summary: Sucesso
+                  value:
+                    id: "12345678"
+                    init_point: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=12345678"
+                    client_id: "client-123"
+                    api_version: "v2"
+                    created_at: "2024-01-15T10:30:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/mercado-pago/create-subscription:
+    post:
+      tags:
+        - Assinaturas
+      summary: Criar assinatura recorrente
+      description: |
+        Cria uma assinatura recorrente (mensal ou anual) no MercadoPago.
+
+        **Rate Limit:** 50 requisições por minuto por cliente
+
+        **Permissões requeridas:** `create_subscription`
+      operationId: createSubscription
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionRequest"
+            examples:
+              mensal:
+                summary: Assinatura Mensal
+                value:
+                  planType: "monthly"
+                  userEmail: "usuario@email.com"
+                  userId: "user-123"
+              anual:
+                summary: Assinatura Anual
+                value:
+                  planType: "annual"
+                  userEmail: "cliente@empresa.com"
+                  userId: "user-456"
+      responses:
+        "200":
+          description: Assinatura criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+              examples:
+                success:
+                  summary: Sucesso
+                  value:
+                    id: "sub-98765432"
+                    init_point: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=sub-98765432"
+                    status: "pending"
+                    plan_type: "monthly"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/mercado-pago/webhook:
+    post:
+      tags:
+        - Webhooks
+      summary: Receber notificações do MercadoPago
+      description: |
+        Endpoint para receber notificações de pagamentos e assinaturas do MercadoPago.
+
+        **Rate Limit:** 1000 requisições por minuto (global)
+
+        **Autenticação:** Verificação HMAC automática
+      operationId: receiveWebhook
+      security: [] # Webhook não usa API Key, usa HMAC
+      parameters:
+        - name: x-signature
+          in: header
+          required: true
+          description: Assinatura HMAC-SHA256 do MercadoPago
+          schema:
+            type: string
+            example: "ts=1234567890,v1=abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookEvent"
+            examples:
+              payment_approved:
+                summary: Pagamento Aprovado
+                value:
+                  action: "payment.updated"
+                  api_version: "v1"
+                  data:
+                    id: "12345678"
+                  date_created: "2024-01-15T10:30:00Z"
+                  id: 123456789
+                  live_mode: false
+                  type: "payment"
+                  user_id: "987654321"
+              subscription_created:
+                summary: Assinatura Criada
+                value:
+                  action: "subscription.created"
+                  api_version: "v1"
+                  data:
+                    id: "sub-98765432"
+                  date_created: "2024-01-15T10:30:00Z"
+                  id: 123456790
+                  live_mode: false
+                  type: "subscription"
+                  user_id: "987654321"
+      responses:
+        "200":
+          description: Webhook processado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "received"
+                  message:
+                    type: string
+                    example: "Webhook processado com sucesso"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Assinatura HMAC inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "Invalid HMAC signature"
+                details: "A assinatura fornecida não é válida"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/mercado-pago/transactions:
+    get:
+      tags:
+        - Transações
+      summary: Listar transações
+      description: |
+        Lista transações com filtros opcionais.
+
+        **Rate Limit:** 200 requisições por minuto por cliente
+
+        **Permissões requeridas:** `read_transactions`
+      operationId: listTransactions
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          description: Data de início (ISO 8601)
+          schema:
+            type: string
+            format: date
+            example: "2024-01-01"
+        - name: endDate
+          in: query
+          description: Data de fim (ISO 8601)
+          schema:
+            type: string
+            format: date
+            example: "2024-12-31"
+        - name: limit
+          in: query
+          description: Número máximo de resultados
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 10
+        - name: offset
+          in: query
+          description: Número de registros para pular
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            example: 0
+        - name: status
+          in: query
+          description: Filtrar por status
+          schema:
+            type: string
+            enum: [pending, approved, rejected, cancelled]
+            example: "approved"
+      responses:
+        "200":
+          description: Lista de transações
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/mercado-pago/payment/{paymentId}:
+    get:
+      tags:
+        - Pagamentos
+      summary: Consultar status de pagamento
+      description: |
+        Consulta o status detalhado de um pagamento específico.
+
+        **Rate Limit:** 200 requisições por minuto por cliente
+
+        **Permissões requeridas:** `read_payments`
+      operationId: getPaymentStatus
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          description: ID do pagamento
+          schema:
+            type: string
+            example: "12345678"
+      responses:
+        "200":
+          description: Detalhes do pagamento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentDetails"
+        "404":
+          description: Pagamento não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "Payment not found"
+                details: "O pagamento especificado não foi encontrado"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/mercado-pago/subscription/{subscriptionId}/cancel:
+    post:
+      tags:
+        - Assinaturas
+      summary: Cancelar assinatura
+      description: |
+        Cancela uma assinatura ativa.
+
+        **Rate Limit:** 50 requisições por minuto por cliente
+
+        **Permissões requeridas:** `cancel_subscription`
+      operationId: cancelSubscription
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          description: ID da assinatura
+          schema:
+            type: string
+            example: "sub-98765432"
+      responses:
+        "200":
+          description: Assinatura cancelada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "cancelled"
+                  message:
+                    type: string
+                    example: "Assinatura cancelada com sucesso"
+                  cancelled_at:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00Z"
+        "404":
+          description: Assinatura não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "Subscription not found"
+                details: "A assinatura especificada não foi encontrada"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Chave de API para autenticação. Obtenha sua chave no painel administrativo.
+
+        Exemplo: `X-API-Key: mp_live_your_api_key_here`
+
+  schemas:
+    CheckoutRequest:
+      type: object
+      required:
+        - produto
+        - preco
+        - order_id
+      properties:
+        produto:
+          type: string
+          description: Nome do produto ou serviço
+          minLength: 1
+          maxLength: 256
+          example: "Curso de JavaScript Avançado"
+        preco:
+          type: number
+          format: double
+          description: Preço do produto em reais
+          minimum: 0.01
+          maximum: 99999.99
+          example: 199.90
+        email:
+          type: string
+          format: email
+          description: Email do comprador (opcional)
+          maxLength: 256
+          example: "cliente@email.com"
+        order_id:
+          type: string
+          description: ID único do pedido
+          minLength: 1
+          maxLength: 128
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "order-12345"
+
+    CheckoutResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID do checkout no MercadoPago
+          example: "12345678"
+        init_point:
+          type: string
+          format: uri
+          description: URL para redirecionamento do cliente
+          example: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=12345678"
+        client_id:
+          type: string
+          description: ID do cliente
+          example: "client-123"
+        api_version:
+          type: string
+          description: Versão da API utilizada
+          example: "v2"
+        created_at:
+          type: string
+          format: date-time
+          description: Data de criação do checkout
+          example: "2024-01-15T10:30:00Z"
+
+    SubscriptionRequest:
+      type: object
+      required:
+        - planType
+        - userEmail
+      properties:
+        planType:
+          type: string
+          enum: [monthly, annual]
+          description: Tipo do plano de assinatura
+          example: "monthly"
+        userEmail:
+          type: string
+          format: email
+          description: Email do usuário
+          maxLength: 256
+          example: "usuario@email.com"
+        userId:
+          type: string
+          description: ID do usuário (opcional)
+          maxLength: 128
+          example: "user-123"
+
+    SubscriptionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID da assinatura
+          example: "sub-98765432"
+        init_point:
+          type: string
+          format: uri
+          description: URL para configuração da assinatura
+          example: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=sub-98765432"
+        status:
+          type: string
+          enum: [pending, active, cancelled, paused]
+          description: Status da assinatura
+          example: "pending"
+        plan_type:
+          type: string
+          enum: [monthly, annual]
+          description: Tipo do plano
+          example: "monthly"
+
+    WebhookEvent:
+      type: object
+      properties:
+        action:
+          type: string
+          description: Ação que disparou o webhook
+          example: "payment.updated"
+        api_version:
+          type: string
+          description: Versão da API
+          example: "v1"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              description: ID do recurso
+              example: "12345678"
+        date_created:
+          type: string
+          format: date-time
+          description: Data de criação do evento
+          example: "2024-01-15T10:30:00Z"
+        id:
+          type: integer
+          description: ID do evento
+          example: 123456789
+        live_mode:
+          type: boolean
+          description: Indica se é ambiente de produção
+          example: false
+        type:
+          type: string
+          enum: [payment, subscription]
+          description: Tipo do evento
+          example: "payment"
+        user_id:
+          type: string
+          description: ID do usuário
+          example: "987654321"
+
+    TransactionsResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: integer
+          description: Total de transações
+          example: 150
+        limit:
+          type: integer
+          description: Limite aplicado
+          example: 20
+        offset:
+          type: integer
+          description: Offset aplicado
+          example: 0
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "12345678"
+        order_id:
+          type: string
+          example: "order-12345"
+        amount:
+          type: number
+          format: double
+          example: 199.90
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled]
+          example: "approved"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:35:00Z"
+
+    PaymentDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "12345678"
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled]
+          example: "approved"
+        amount:
+          type: number
+          format: double
+          example: 199.90
+        currency:
+          type: string
+          example: "BRL"
+        payment_method:
+          type: object
+          properties:
+            type:
+              type: string
+              example: "credit_card"
+            id:
+              type: string
+              example: "visa"
+        payer:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+              example: "cliente@email.com"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:35:00Z"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Mensagem de erro
+          example: "Invalid request"
+        details:
+          type: string
+          description: Detalhes adicionais do erro
+          example: "O campo 'produto' é obrigatório"
+        code:
+          type: string
+          description: Código do erro
+          example: "VALIDATION_ERROR"
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp do erro
+          example: "2024-01-15T10:30:00Z"
+
+  responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            validation_error:
+              summary: Erro de Validação
+              value:
+                error: "Validation failed"
+                details: "O campo 'produto' é obrigatório"
+                code: "VALIDATION_ERROR"
+                timestamp: "2024-01-15T10:30:00Z"
+            invalid_json:
+              summary: JSON Inválido
+              value:
+                error: "Invalid JSON"
+                details: "O corpo da requisição contém JSON inválido"
+                code: "PARSE_ERROR"
+                timestamp: "2024-01-15T10:30:00Z"
+
+    Unauthorized:
+      description: Chave de API inválida ou ausente
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Unauthorized"
+            details: "Chave de API inválida ou ausente"
+            code: "AUTH_ERROR"
+            timestamp: "2024-01-15T10:30:00Z"
+
+    Forbidden:
+      description: Permissões insuficientes
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Forbidden"
+            details: "Permissões insuficientes para esta operação"
+            code: "PERMISSION_ERROR"
+            timestamp: "2024-01-15T10:30:00Z"
+
+    RateLimitExceeded:
+      description: Limite de taxa excedido
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Limite de requisições por minuto
+          example: 100
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requisições restantes na janela atual
+          example: 0
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Timestamp quando o limite será resetado
+          example: 1705312200
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Rate limit exceeded"
+            details: "Limite de 100 requisições por minuto excedido"
+            code: "RATE_LIMIT_ERROR"
+            timestamp: "2024-01-15T10:30:00Z"
+
+    InternalServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Internal server error"
+            details: "Ocorreu um erro interno. Tente novamente em alguns minutos"
+            code: "INTERNAL_ERROR"
+            timestamp: "2024-01-15T10:30:00Z"
+
+tags:
+  - name: Pagamentos
+    description: Operações relacionadas a pagamentos únicos
+  - name: Assinaturas
+    description: Operações relacionadas a assinaturas recorrentes
+  - name: Webhooks
+    description: Recebimento de notificações do MercadoPago
+  - name: Transações
+    description: Consulta e gestão de transações

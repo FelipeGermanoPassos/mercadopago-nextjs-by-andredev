@@ -10,15 +10,17 @@ import { handleMercadoPagoSubscription } from "@/app/server/mercado-pago/handle-
 const processedEvents = new Map<string, number>();
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 horas
 
-// Limpar eventos antigos periodicamente
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, timestamp] of processedEvents.entries()) {
-    if (now - timestamp > CACHE_EXPIRY) {
-      processedEvents.delete(key);
+// Limpar eventos antigos periodicamente (apenas em produção, não durante testes)
+if (process.env.NODE_ENV !== "test") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, timestamp] of processedEvents.entries()) {
+      if (now - timestamp > CACHE_EXPIRY) {
+        processedEvents.delete(key);
+      }
     }
-  }
-}, 60 * 60 * 1000); // Limpa a cada hora
+  }, 60 * 60 * 1000); // Limpa a cada hora
+}
 
 export async function POST(request: Request) {
   try {
