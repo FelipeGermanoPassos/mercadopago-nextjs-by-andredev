@@ -36,7 +36,8 @@ describe("POST /api/mercado-pago/create-subscription", () => {
     });
 
     const requestBody = {
-      planType: "monthly",
+      amount: 29.9,
+      period: "monthly",
       userEmail: "teste@example.com",
       userId: "user-123",
     };
@@ -58,20 +59,30 @@ describe("POST /api/mercado-pago/create-subscription", () => {
 
     expect(response.status).toBe(200);
     expect(data).toEqual({
+      success: true,
       subscriptionId: mockSubscriptionId,
       initPoint: mockInitPoint,
-      planType: "monthly",
-      amount: 14.9,
-      frequency: "mensal",
+      planDetails: {
+        period: "monthly",
+        periodLabel: "Mensal",
+        amount: 29.9,
+        currency: "BRL",
+        frequency: 1,
+        frequencyType: "months",
+        title: "Assinatura Mensal",
+        description: "Cobrança mensal de R$ 29.90",
+      },
+      userEmail: "teste@example.com",
+      externalReference: "user-123",
     });
 
     expect(mockPreApprovalCreate).toHaveBeenCalledWith({
       body: expect.objectContaining({
-        reason: "Plano Mensal",
+        reason: "Assinatura Mensal",
         auto_recurring: expect.objectContaining({
           frequency: 1,
           frequency_type: "months",
-          transaction_amount: 14.9,
+          transaction_amount: 29.9,
           currency_id: "BRL",
         }),
       }),
@@ -89,7 +100,8 @@ describe("POST /api/mercado-pago/create-subscription", () => {
     });
 
     const requestBody = {
-      planType: "annual",
+      amount: 299.9,
+      period: "annual",
       userEmail: "teste@example.com",
       userId: "user-456",
     };
@@ -111,21 +123,32 @@ describe("POST /api/mercado-pago/create-subscription", () => {
 
     expect(response.status).toBe(200);
     expect(data).toEqual({
+      success: true,
       subscriptionId: mockSubscriptionId,
       initPoint: mockInitPoint,
-      planType: "annual",
-      amount: 119.9,
-      frequency: "12 meses",
+      planDetails: {
+        period: "annual",
+        periodLabel: "Anual",
+        amount: 299.9,
+        currency: "BRL",
+        frequency: 12,
+        frequencyType: "months",
+        title: "Assinatura Anual",
+        description: "Cobrança anual de R$ 299.90",
+      },
+      userEmail: "teste@example.com",
+      externalReference: "user-456",
     });
 
     const createCall = mockPreApprovalCreate.mock.calls[0][0];
     expect(createCall.body.auto_recurring.frequency).toBe(12); // 12 meses
-    expect(createCall.body.auto_recurring.transaction_amount).toBe(119.9);
+    expect(createCall.body.auto_recurring.transaction_amount).toBe(299.9);
   });
 
-  it("deve retornar erro quando planType for inválido", async () => {
+  it("deve retornar erro quando período for inválido", async () => {
     const requestBody = {
-      planType: "weekly", // Tipo inválido
+      amount: 49.9,
+      period: "invalid", // Período inválido
       userEmail: "teste@example.com",
       userId: "user-789",
     };
